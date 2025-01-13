@@ -1,6 +1,9 @@
 import codonbias
 from numba import njit, types
 from numba.typed import Dict, List
+from Bio import SeqIO
+
+from Bio.SeqUtils import CodonAdaptationIndex
 
 import numpy as np
 
@@ -67,8 +70,9 @@ def is_nucleotide_watson_crick(nucleotide: chr, anti_nucleotide: chr) -> bool:
 
     return nucleotide == get_nucleotide_watson_crick(anti_nucleotide)
 
+
 @njit
-def get_anti_codon(codon : str) -> str:
+def get_anti_codon(codon: str) -> str:
     anti_codon = ''
     # reversed not supported in numba asof now
     for n in range(len(codon) - 1, -1, -1):
@@ -290,3 +294,8 @@ def calculate_tai(seq: str) -> float:
 
     np_weights = np.array(weights) / np.max(weights)  # normalize so number is between 0 and 1
     return np.exp(np.mean(np.log(np_weights)))
+
+
+def calculate_cai(sequence: str, reference_genes: List[str]) -> float:
+    cai_calculator = CodonAdaptationIndex(reference_genes)
+    return cai_calculator.calculate(sequence)
