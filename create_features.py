@@ -176,7 +176,7 @@ FEATURES = ['ENC', 'gc_content', 'tAI', 'size', 'cAI50', 'cAI200', 'cAI200_first
             'fold_duplex_gfp', 'fold_duplex_rfp',
             'fold_cofold_gfp', 'fold_cofold_rfp',
             'cofold_start_gfp', 'cofold_start_rfp', # TODO: rename
-            'duplex_ends_gfp', 'duplex_ends_rfp', # TODO: rename
+            'duplex_ends_gfp', 'duplex_ends_rfp',
 
             ]
 
