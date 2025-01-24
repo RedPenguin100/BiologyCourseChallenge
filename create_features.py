@@ -78,6 +78,10 @@ def calculate_fold_duplex(seq: str, fp: str):
     fc = RNA.duplexfold(seq, fp)
     return fc.energy
 
+def calculate_cofold(seq: str, fp: str):
+    co_res = RNA.cofold(seq, fp)
+    return co_res[-1]
+
 
 def parallel_row_calculate(key_value):
     locus_tag, coding_sequences = key_value
@@ -112,7 +116,19 @@ def parallel_row_calculate(key_value):
     results.append(calculate_fold_energy(coding_sequence_total[:40]))
 
     results.append(calculate_fold_duplex(coding_sequence_total, gfp_gene[::-1]))
-    # results.append(calculate_fold_duplex(coding_sequence_total, rfp_gene))
+    results.append(calculate_fold_duplex(coding_sequence_total, rfp_gene[::-1]))
+
+    results.append(calculate_cofold(gfp_gene, coding_sequence_total))
+    results.append(calculate_cofold(rfp_gene, coding_sequence_total))
+
+    results.append(calculate_fold_duplex(coding_sequence_total, gfp_gene[::-1][:150]))
+    results.append(calculate_fold_duplex(coding_sequence_total, rfp_gene[::-1][:150]))
+
+    results.append(calculate_fold_duplex(coding_sequence_total[:150], gfp_gene[::-1][:150]))
+    results.append(calculate_fold_duplex(coding_sequence_total[:150], rfp_gene[::-1][:150]))
+
+    # Very slow, run only when needed
+    # results.append(calculate_fold_energy(coding_sequence_total))
 
     return results
 
@@ -156,7 +172,12 @@ def get_locus_to_data_dict():
 FEATURES = ['ENC', 'gc_content', 'tAI', 'size', 'cAI50', 'cAI200', 'cAI200_first50', 'cAI200_last50', 'charge',
             'charge10',
             'gfp_tai',
-            'rfp_tai', 'fold_energy_begin', 'fold_duplex_gfp'
+            'rfp_tai', 'fold_energy_begin',
+            'fold_duplex_gfp', 'fold_duplex_rfp',
+            'fold_cofold_gfp', 'fold_cofold_rfp',
+            'cofold_start_gfp', 'cofold_start_rfp', # TODO: rename
+            'duplex_ends_gfp', 'duplex_ends_rfp', # TODO: rename
+
             ]
 
 ALL_FEATURES = set(FEATURES+ ['fold_energy'])
@@ -178,7 +199,7 @@ if __name__ == '__main__':
     start = time.time()
     results = []
     with ProcessPoolExecutor(initializer=initialize_all, initargs=(locus_to_data, genes)) as executor:
-        futures = executor.map(parallel_row_calculate, locus_to_data.items(), chunksize=10)
+        futures = executor.map(parallel_row_calculate, locus_to_data.items())
 
         # Track progress
         completed = 0
@@ -190,6 +211,7 @@ if __name__ == '__main__':
             completed += 1
             if completed % progress_interval == 0:
                 print(f"Completed {completed} of {total_tasks} tasks")
+                assert len(result) == len(FEATURES) + 1, "Incorrect alignment"
 
     end = time.time()
     print(f"Creating all features took: {end - start}s")
