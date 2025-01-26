@@ -12,7 +12,9 @@ from Bio.SeqUtils.ProtParam import ProteinAnalysis
 from concurrent.futures import ProcessPoolExecutor
 
 from consts import TARGETS_FA, YEAST_FASTA_PATH, YEAST_METADATA_PATH
-from util import calculate_enc, calculate_tai, calculate_cai
+from util import calculate_enc, calculate_tai, calculate_cai, calculate_distance, calculate_rscu, \
+    calculate_distance_asym, calculate_distance_asym_weighted
+
 
 def cond_print(text, should_print=False):
     if should_print:
@@ -127,6 +129,14 @@ def parallel_row_calculate(key_value):
     results.append(calculate_fold_duplex(coding_sequence_total[:150], gfp_gene[::-1][:150]))
     results.append(calculate_fold_duplex(coding_sequence_total[:150], rfp_gene[::-1][:150]))
 
+    results.append(calculate_distance(gfp_gene, coding_sequence_total))
+    results.append(calculate_distance(rfp_gene, coding_sequence_total))
+    results.append(calculate_rscu(coding_sequence_total))
+    results.append(calculate_distance_asym(gfp_gene, coding_sequence_total))
+    results.append(calculate_distance_asym(rfp_gene, coding_sequence_total))
+    results.append(calculate_distance_asym_weighted(gfp_gene, coding_sequence_total))
+    results.append(calculate_distance_asym_weighted(rfp_gene, coding_sequence_total))
+
     # Very slow, run only when needed
     # results.append(calculate_fold_energy(coding_sequence_total))
 
@@ -177,7 +187,12 @@ FEATURES = ['ENC', 'gc_content', 'tAI', 'size', 'cAI50', 'cAI200', 'cAI200_first
             'fold_cofold_gfp', 'fold_cofold_rfp',
             'cofold_start_gfp', 'cofold_start_rfp', # TODO: rename
             'duplex_ends_gfp', 'duplex_ends_rfp',
-
+            'rscu_distance_gfp', 'rscu_distance_rfp',
+            'rscu',
+            'rscu_distance_asym_gfp',
+            'rscu_distance_asym_rfp',
+            'rscu_distance_weighted_asym_gfp',
+            'rscu_distance_weighted_asym_rfp',
             ]
 
 ALL_FEATURES = set(FEATURES+ ['fold_energy'])

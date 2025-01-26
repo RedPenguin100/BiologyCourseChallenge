@@ -1,4 +1,5 @@
 import codonbias
+from codonbias.scores import RelativeSynonymousCodonUsage
 from numba import njit, types
 from numba.typed import Dict, List
 from Bio import SeqIO
@@ -257,6 +258,39 @@ def trna_copy_number(anti_codon: str) -> int:
         raise ValueError(f"codon {anti_codon} must be divisible by 3")
 
     return get_trna_dict().get(anti_codon, 0)
+
+
+def determination(actual: np.array, predicted: np.array):
+    mean_actual = np.mean(actual)
+
+    residual_sum = np.sum((predicted - actual) ** 2)
+    total_sum = np.sum((actual - mean_actual) ** 2)
+
+    return 1 - residual_sum / total_sum
+
+def calculate_distance_asym_weighted(fp_seq: str, target_seq: str):
+    rscu_fp = RelativeSynonymousCodonUsage().get_weights(fp_seq)
+    rscu_target = RelativeSynonymousCodonUsage().get_weights(target_seq)
+    fp_weights = np.array(rscu_fp)
+    target_weights = np.array(rscu_target)
+    return np.linalg.norm((fp_weights - target_weights) * target_weights)
+
+def calculate_distance_asym(fp_seq: str, target_seq: str):
+    rscu_fp = RelativeSynonymousCodonUsage().get_weights(fp_seq)
+    rscu_target = RelativeSynonymousCodonUsage().get_weights(target_seq)
+    fp_weights = np.array(rscu_fp)
+    target_weights = np.array(rscu_target)
+    return np.linalg.norm(np.maximum(fp_weights - target_weights, 0))
+
+def calculate_distance(fp_seq: str, target_seq: str):
+    rscu_fp = RelativeSynonymousCodonUsage().get_weights(fp_seq)
+    rscu_target = RelativeSynonymousCodonUsage().get_weights(target_seq)
+    fp_weights = np.array(rscu_fp)
+    target_weights = np.array(rscu_target)
+    return np.linalg.norm(fp_weights - target_weights)
+
+def calculate_rscu(target_seq):
+    return RelativeSynonymousCodonUsage().get_score(target_seq)
 
 
 @njit
