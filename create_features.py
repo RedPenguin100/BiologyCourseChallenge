@@ -12,7 +12,9 @@ from Bio.SeqUtils.ProtParam import ProteinAnalysis
 from concurrent.futures import ProcessPoolExecutor
 
 from consts import TARGETS_FA, YEAST_FASTA_PATH, YEAST_METADATA_PATH
-from util import calculate_enc, calculate_tai, calculate_cai
+from util import calculate_enc, calculate_tai, calculate_cai, calculate_distance, calculate_rscu, \
+    calculate_distance_asym, calculate_distance_asym_weighted
+
 
 def cond_print(text, should_print=False):
     if should_print:
@@ -78,6 +80,10 @@ def calculate_fold_duplex(seq: str, fp: str):
     fc = RNA.duplexfold(seq, fp)
     return fc.energy
 
+def calculate_cofold(seq: str, fp: str):
+    co_res = RNA.cofold(seq, fp)
+    return co_res[-1]
+
 
 def parallel_row_calculate(key_value):
     locus_tag, coding_sequences = key_value
@@ -112,7 +118,27 @@ def parallel_row_calculate(key_value):
     results.append(calculate_fold_energy(coding_sequence_total[:40]))
 
     results.append(calculate_fold_duplex(coding_sequence_total, gfp_gene[::-1]))
-    # results.append(calculate_fold_duplex(coding_sequence_total, rfp_gene))
+    results.append(calculate_fold_duplex(coding_sequence_total, rfp_gene[::-1]))
+
+    results.append(calculate_cofold(gfp_gene, coding_sequence_total))
+    results.append(calculate_cofold(rfp_gene, coding_sequence_total))
+
+    results.append(calculate_fold_duplex(coding_sequence_total, gfp_gene[::-1][:150]))
+    results.append(calculate_fold_duplex(coding_sequence_total, rfp_gene[::-1][:150]))
+
+    results.append(calculate_fold_duplex(coding_sequence_total[:150], gfp_gene[::-1][:150]))
+    results.append(calculate_fold_duplex(coding_sequence_total[:150], rfp_gene[::-1][:150]))
+
+    results.append(calculate_distance(gfp_gene, coding_sequence_total))
+    results.append(calculate_distance(rfp_gene, coding_sequence_total))
+    results.append(calculate_rscu(coding_sequence_total))
+    results.append(calculate_distance_asym(gfp_gene, coding_sequence_total))
+    results.append(calculate_distance_asym(rfp_gene, coding_sequence_total))
+    results.append(calculate_distance_asym_weighted(gfp_gene, coding_sequence_total))
+    results.append(calculate_distance_asym_weighted(rfp_gene, coding_sequence_total))
+
+    # Very slow, run only when needed
+    # results.append(calculate_fold_energy(coding_sequence_total))
 
     return results
 
@@ -156,7 +182,17 @@ def get_locus_to_data_dict():
 FEATURES = ['ENC', 'gc_content', 'tAI', 'size', 'cAI50', 'cAI200', 'cAI200_first50', 'cAI200_last50', 'charge',
             'charge10',
             'gfp_tai',
-            'rfp_tai', 'fold_energy_begin', 'fold_duplex_gfp'
+            'rfp_tai', 'fold_energy_begin',
+            'fold_duplex_gfp', 'fold_duplex_rfp',
+            'fold_cofold_gfp', 'fold_cofold_rfp',
+            'cofold_start_gfp', 'cofold_start_rfp', # TODO: rename
+            'duplex_ends_gfp', 'duplex_ends_rfp',
+            'rscu_distance_gfp', 'rscu_distance_rfp',
+            'rscu',
+            'rscu_distance_asym_gfp',
+            'rscu_distance_asym_rfp',
+            'rscu_distance_weighted_asym_gfp',
+            'rscu_distance_weighted_asym_rfp',
             ]
 
 ALL_FEATURES = set(FEATURES+ ['fold_energy'])
@@ -178,7 +214,7 @@ if __name__ == '__main__':
     start = time.time()
     results = []
     with ProcessPoolExecutor(initializer=initialize_all, initargs=(locus_to_data, genes)) as executor:
-        futures = executor.map(parallel_row_calculate, locus_to_data.items(), chunksize=10)
+        futures = executor.map(parallel_row_calculate, locus_to_data.items())
 
         # Track progress
         completed = 0
@@ -190,6 +226,7 @@ if __name__ == '__main__':
             completed += 1
             if completed % progress_interval == 0:
                 print(f"Completed {completed} of {total_tasks} tasks")
+                assert len(result) == len(FEATURES) + 1, "Incorrect alignment"
 
     end = time.time()
     print(f"Creating all features took: {end - start}s")

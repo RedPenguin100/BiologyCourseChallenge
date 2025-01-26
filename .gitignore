@@ -166,5 +166,5 @@ cython_debug/
 # PyCharm
 .idea/
 
-# No reason to have the PDF in git 
+# No reason to have the PDF in git
 Challenge Description.pdf
